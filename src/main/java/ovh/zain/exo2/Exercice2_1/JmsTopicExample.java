@@ -1,4 +1,5 @@
-package ovh.zain.exo1;
+package ovh.zain.exo2.Exercice2_1;
+
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -8,15 +9,14 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
-import javax.jms.Queue;
 import javax.jms.Session;
-import javax.jms.TextMessage;
+import javax.jms.Topic;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
 
-public class Exercice1 {
+public class JmsTopicExample {
     public static void main(String[] args) throws URISyntaxException, Exception {
         BrokerService broker = BrokerFactory.createBroker(new URI(
                 "broker:(tcp://localhost:61616)"));
@@ -29,19 +29,26 @@ public class Exercice1 {
             connection = connectionFactory.createConnection();
             Session session = connection.createSession(false,
                     Session.AUTO_ACKNOWLEDGE);
-            Queue queue = session.createQueue("customerQueue");
-            String payload = "Important Task";
+            Topic topic = session.createTopic("customerTopic");
+
+            // Consumer1 subscribes to customerTopic
+            MessageConsumer consumer1 = session.createConsumer(topic);
+            consumer1.setMessageListener(new ConsumerMessageListener("Consumer1"));
+
+            // Consumer2 subscribes to customerTopic
+            MessageConsumer consumer2 = session.createConsumer(topic);
+            consumer2.setMessageListener(new ConsumerMessageListener("Consumer2"));
+
+            connection.start();
+
+            // Publish
+            String payload = "This message is for all";
             Message msg = session.createTextMessage(payload);
-            MessageProducer producer = session.createProducer(queue);
+            MessageProducer producer = session.createProducer(topic);
             System.out.println("Sending text '" + payload + "'");
             producer.send(msg);
 
-            // Consumer
-            MessageConsumer consumer = session.createConsumer(queue);
-            connection.start();
-            TextMessage textMsg = (TextMessage) consumer.receive();
-            System.out.println(textMsg);
-            System.out.println("Received: " + textMsg.getText());
+            Thread.sleep(3000);
             session.close();
         } finally {
             if (connection != null) {
@@ -50,5 +57,4 @@ public class Exercice1 {
             broker.stop();
         }
     }
-
 }
